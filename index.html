@@ -842,7 +842,12 @@
 
   $('toolbarLinkBtn').addEventListener('click', () => {
     const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) savedLinkRange = sel.getRangeAt(0).cloneRange();
+    if (sel && sel.rangeCount > 0) {
+      savedLinkRange = sel.getRangeAt(0).cloneRange();
+      console.log('[GoWrite link] saved range on button click, text:', savedLinkRange.toString());
+    } else {
+      console.warn('[GoWrite link] no active selection when link button was clicked');
+    }
     linkBtnsRow.style.display = 'none';
     linkForm.style.display = 'flex';
     $('toolbarLinkInput').focus();
@@ -863,12 +868,17 @@
     anchor.setAttribute('rel', 'noopener noreferrer');
     try {
       range.surroundContents(anchor);
+      console.log('[GoWrite link] surroundContents succeeded');
     } catch (err) {
-      // Falls back here if the selection partially crosses another element
-      // (e.g. starts mid-bold-text) — surroundContents can't handle that directly.
-      const contents = range.extractContents();
-      anchor.appendChild(contents);
-      range.insertNode(anchor);
+      console.log('[GoWrite link] surroundContents failed, falling back:', err.message);
+      try {
+        const contents = range.extractContents();
+        anchor.appendChild(contents);
+        range.insertNode(anchor);
+        console.log('[GoWrite link] fallback extractContents/insertNode succeeded');
+      } catch (err2) {
+        console.error('[GoWrite link] fallback also failed:', err2);
+      }
     }
   }
 
@@ -877,9 +887,13 @@
     const raw = $('toolbarLinkInput').value.trim();
     if (!raw) return;
     const href = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    console.log('[GoWrite link] submit fired, href:', href, 'savedLinkRange:', savedLinkRange);
     editor.focus();
     if (savedLinkRange) {
+      console.log('[GoWrite link] range text was:', savedLinkRange.toString());
       wrapRangeInLink(savedLinkRange, href);
+    } else {
+      console.warn('[GoWrite link] savedLinkRange was null/empty — nothing to link');
     }
     savedLinkRange = null;
     emitChange();
